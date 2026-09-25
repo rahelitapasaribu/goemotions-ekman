@@ -89,13 +89,12 @@ def get_training_args(
         num_train_epochs=NUM_EPOCHS if num_epochs is None else num_epochs,
         weight_decay=WEIGHT_DECAY if weight_decay is None else weight_decay,
         warmup_steps=271,
-        
+
         # Evaluation & Logging
         eval_strategy="epoch",
         save_strategy="epoch",
         logging_strategy="epoch",
-        logging_dir=LOG_DIR,
-        
+
         # Model selection
         load_best_model_at_end=True,
         metric_for_best_model="macro_f1",
