@@ -88,7 +88,6 @@ def get_training_args(
         per_device_eval_batch_size=(BATCH_SIZE if batch_size is None else batch_size) * 2,
         num_train_epochs=NUM_EPOCHS if num_epochs is None else num_epochs,
         weight_decay=WEIGHT_DECAY if weight_decay is None else weight_decay,
-        warmup_ratio=WARMUP_RATIO if warmup_ratio is None else warmup_ratio,
         
         # Evaluation & Logging
         eval_strategy="epoch",
