@@ -83,12 +83,12 @@ def get_training_args(
         output_dir=output_dir or os.path.join(CHECKPOINT_DIR, experiment_name),
         
         # Training hyperparameters
-        learning_rate=learning_rate or LEARNING_RATE,
-        per_device_train_batch_size=batch_size or BATCH_SIZE,
-        per_device_eval_batch_size=(batch_size or BATCH_SIZE) * 2,
-        num_train_epochs=num_epochs or NUM_EPOCHS,
-        weight_decay=weight_decay or WEIGHT_DECAY,
-        warmup_ratio=warmup_ratio or WARMUP_RATIO,
+        learning_rate=LEARNING_RATE if learning_rate is None else learning_rate,
+        per_device_train_batch_size=BATCH_SIZE if batch_size is None else batch_size,
+        per_device_eval_batch_size=(BATCH_SIZE if batch_size is None else batch_size) * 2,
+        num_train_epochs=NUM_EPOCHS if num_epochs is None else num_epochs,
+        weight_decay=WEIGHT_DECAY if weight_decay is None else weight_decay,
+        warmup_ratio=WARMUP_RATIO if warmup_ratio is None else warmup_ratio,
         
         # Evaluation & Logging
         eval_strategy="epoch",
@@ -102,8 +102,8 @@ def get_training_args(
         greater_is_better=True,
         
         # Reproducibility
-        seed=seed or SEED,
-        data_seed=seed or SEED,
+        seed=SEED if seed is None else seed,
+        data_seed=SEED if seed is None else seed,
         
         # Misc
         report_to="none",  # Disable wandb/tensorboard

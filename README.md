@@ -70,10 +70,3 @@ All hyperparameters are centralized in `src/config.py`:
 ## 🔧 Threshold Selection
 Global threshold dipilih pada validation set dari kandidat [0.3, 0.35, 0.4, ..., 0.7] berdasarkan Macro-F1.
 
-## 👥 Team
-- [Nama anggota kelompok]
-
-## 📝 Academic
-- Course: Machine Learning for Text
-- Program: Sarjana Informatika, Semester 7
-- Year: 2026/2027

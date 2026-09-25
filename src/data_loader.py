@@ -1,125 +1,82 @@
 """
 Data Loader Module.
 
-Memuat dataset GoEmotions-Ekman dari HuggingFace,
-memeriksa schema, dan menyediakan data untuk pipeline.
+Memuat dataset GoEmotions-Ekman dari HuggingFace
+dan menyiapkan target labels_ekman menjadi multi-hot.
 """
 
 from datasets import load_dataset
 import pandas as pd
 import numpy as np
 
-from src.config import (
-    DATASET_NAME,
-    LABEL_COLUMNS,
-    TEXT_COLUMN,
-    SEED,
-)
+from src.config import DATASET_NAME
+
+
+EKMAN_LABELS = [
+    "anger",
+    "disgust",
+    "fear",
+    "joy",
+    "sadness",
+    "surprise",
+    "neutral",
+]
 
 
 def load_goemotions():
     """
-    Memuat dataset GoEmotions-Ekman dari HuggingFace.
-    
-    Returns:
-        datasets.DatasetDict: Dataset dengan splits train, validation, test.
+    Load dataset dari HuggingFace.
     """
     ds = load_dataset(DATASET_NAME)
     return ds
 
 
-def validate_dataset(ds):
+def labels_to_multihot(label_ids, num_labels=7):
     """
-    Memeriksa schema dan kualitas data.
-    
-    Checks:
-    - Keberadaan kolom teks dan label
-    - Missing/empty text
-    - Label validity (harus 0 atau 1)
-    - Duplikasi
-    
-    Args:
-        ds: HuggingFace DatasetDict
-        
-    Returns:
-        dict: Hasil validasi
+    Mengubah list indeks labels_ekman menjadi multi-hot vector.
+
+    Contoh:
+    [3, 5] -> [0, 0, 0, 1, 0, 1, 0]
     """
-    results = {}
-    
-    for split_name in ds:
-        split = ds[split_name]
-        df = split.to_pandas()
-        
-        split_results = {
-            "total_rows": len(df),
-            "columns": list(df.columns),
-        }
-        
-        # Cek kolom yang diharapkan ada
-        expected_cols = [TEXT_COLUMN] + LABEL_COLUMNS
-        missing_cols = [c for c in expected_cols if c not in df.columns]
-        split_results["missing_columns"] = missing_cols
-        
-        # Cek missing/empty text
-        if TEXT_COLUMN in df.columns:
-            split_results["null_text"] = int(df[TEXT_COLUMN].isnull().sum())
-            split_results["empty_text"] = int((df[TEXT_COLUMN] == "").sum())
-        
-        # Cek label validity (harus 0 atau 1)
-        label_issues = {}
-        for col in LABEL_COLUMNS:
-            if col in df.columns:
-                unique_vals = df[col].unique()
-                invalid = [v for v in unique_vals if v not in [0, 1]]
-                if invalid:
-                    label_issues[col] = invalid
-        split_results["invalid_labels"] = label_issues
-        
-        # Cek duplikasi teks
-        if TEXT_COLUMN in df.columns:
-            split_results["duplicate_texts"] = int(df[TEXT_COLUMN].duplicated().sum())
-        
-        results[split_name] = split_results
-    
-    return results
+    vector = np.zeros(num_labels, dtype=np.float32)
+
+    for label_id in label_ids:
+        vector[int(label_id)] = 1.0
+
+    return vector
+
+
+def prepare_dataframe(split):
+    """
+    Mengubah HuggingFace Dataset menjadi DataFrame dan
+    membuat 7 kolom target Ekman.
+    """
+    df = split.to_pandas()
+
+    # Validasi kolom penting
+    required_columns = ["text", "labels_ekman"]
+
+    for col in required_columns:
+        if col not in df.columns:
+            raise ValueError(f"Kolom '{col}' tidak ditemukan pada dataset.")
+
+    # Ubah labels_ekman menjadi multi-hot
+    multihot = np.stack(
+        df["labels_ekman"].apply(labels_to_multihot)
+    )
+
+    # Buat kolom anger, disgust, ..., neutral
+    for i, label in enumerate(EKMAN_LABELS):
+        df[label] = multihot[:, i]
+
+    return df
 
 
 def get_splits_as_dataframe(ds):
     """
-    Konversi setiap split menjadi pandas DataFrame.
-    
-    Args:
-        ds: HuggingFace DatasetDict
-        
-    Returns:
-        dict[str, pd.DataFrame]: Mapping split_name -> DataFrame
+    Prepare train, validation, dan test.
     """
-    return {split: ds[split].to_pandas() for split in ds}
-
-
-def print_validation_report(validation_results):
-    """
-    Print laporan validasi yang readable.
-    
-    Args:
-        validation_results: Output dari validate_dataset()
-    """
-    for split_name, results in validation_results.items():
-        print(f"\n{'='*50}")
-        print(f"Split: {split_name}")
-        print(f"{'='*50}")
-        print(f"  Total rows:      {results['total_rows']}")
-        print(f"  Columns:         {results['columns']}")
-        print(f"  Missing columns: {results['missing_columns']}")
-        
-        if "null_text" in results:
-            print(f"  Null text:       {results['null_text']}")
-            print(f"  Empty text:      {results['empty_text']}")
-        
-        if results.get("invalid_labels"):
-            print(f"  Invalid labels:  {results['invalid_labels']}")
-        else:
-            print(f"  Invalid labels:  None (all valid)")
-        
-        if "duplicate_texts" in results:
-            print(f"  Duplicate texts: {results['duplicate_texts']}")
+    return {
+        split_name: prepare_dataframe(ds[split_name])
+        for split_name in ds.keys()
+    }
